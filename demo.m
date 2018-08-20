@@ -1,7 +1,10 @@
+% modified by Yueqi 2018/8
 clear
 gcp;
 
-name = 'granule_love2.tif';
+% name = 'granule_love2.tif';
+name = 'D:\=data=\80Z_imaging\img_2p\2\20180503T121108.tif';
+
 if ~exist(name,'file')  % download file if it doesn't exist in the directory
     url = 'https://www.dropbox.com/s/mjmtwn4pdgydkny/granule_love2.tif.zip?dl=1';
     filename = 'granule_love2.tif.zip';
@@ -17,16 +20,40 @@ Y = single(Y);                 % convert to single precision
 T = size(Y,ndims(Y));
 Y = Y - min(Y(:));
 %% set parameters (first try out rigid motion correction)
+options_rigid = NoRMCorreSetParms(...
+    'd1',           size(Y,1),...
+    'd2',           size(Y,2),...
+    'bin_width',    10,...
+    'max_shift',    25,...
+    'us_fac',       20,...
+    'init_batch',   200,...
+    'correct_bidir',0); % do not perform bi-directional scanning correction (avoid zigzag artifact)
 
-options_rigid = NoRMCorreSetParms('d1',size(Y,1),'d2',size(Y,2),'bin_width',200,'max_shift',15,'us_fac',50,'init_batch',200);
-
-%% perform motion correction
+% perform motion correction
 tic; [M1,shifts1,template1,options_rigid] = normcorre(Y,options_rigid); toc
-
+% save file as tiff
+M1 = uint16(M1);
+saveastiff(M1,'D:\=data=\80Z_imaging\img_2p\CaImAn_Results\20180503T121108_nobidir.tif');
+% saveastiff(template1,'D:\=data=\80Z_imaging\img_2p\CaImAn_Results\20180503T121108_template.tif');
 %% now try non-rigid motion correction (also in parallel)
-options_nonrigid = NoRMCorreSetParms('d1',size(Y,1),'d2',size(Y,2),'grid_size',[32,32],'mot_uf',4,'bin_width',200,'max_shift',15,'max_dev',3,'us_fac',50,'init_batch',200);
-tic; [M2,shifts2,template2,options_nonrigid] = normcorre_batch(Y,options_nonrigid); toc
+% clear large data in memory, to avoid out of memory problems
+options_nonrigid = NoRMCorreSetParms(...
+    'd1',size(Y,1),...
+    'd2',size(Y,2),...
+    'grid_size',[128, 128],...
+    'mot_uf',4,...
+    'bin_width',200,...
+    'max_shift',15,...
+    'max_dev',3,...
+    'us_fac',50,...
+    'init_batch',200,...
+    'correct_bidir',0);
 
+% perform motion correction
+tic; [M2,shifts2,template2,options_nonrigid] = normcorre_batch(Y,options_nonrigid); toc
+M2 = uint16(M2);
+saveastiff(M2,'D:\=data=\80Z_imaging\img_2p\CaImAn_Results\20180503T121108_nonrigid_nonbidir.tif');
+% saveastiff(template2,'D:\=data=\80Z_imaging\img_2p\CaImAn_Results\20180503T121108_template2.tif');
 %% compute metrics
 
 nnY = quantile(Y(:),0.005);

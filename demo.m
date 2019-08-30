@@ -1,4 +1,5 @@
 % modified by Yueqi 2018/8
+% NoRMCorre for FANTASIA data
 clear
 gcp;
 
